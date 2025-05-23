@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using pv311_web_api.BLL.DTOs.Cars;
 using pv311_web_api.BLL.Services.Image;
+using pv311_web_api.BLL.Services.Storage;
 using pv311_web_api.DAL.Entities;
 using pv311_web_api.DAL.Repositories.Cars;
 using pv311_web_api.DAL.Repositories.Manufactures;
@@ -14,13 +16,15 @@ namespace pv311_web_api.BLL.Services.Cars
         private readonly ICarRepository _carRepository;
         private readonly IManufactureRepository _manufactureRepository;
         private readonly IImageService _imageService;
+        private readonly IStorageService _storageService;
 
-        public CarService(IMapper mapper, ICarRepository carRepository, IManufactureRepository manufactureRepository, IImageService imageService)
+        public CarService(IMapper mapper, ICarRepository carRepository, IManufactureRepository manufactureRepository, IImageService imageService, IStorageService storageService)
         {
             _mapper = mapper;
             _carRepository = carRepository;
             _manufactureRepository = manufactureRepository;
             _imageService = imageService;
+            _storageService = storageService;
         }
 
         public async Task<ServiceResponse> CreateAsync(CreateCarDto dto)
@@ -35,11 +39,7 @@ namespace pv311_web_api.BLL.Services.Cars
 
             if(dto.Images.Count() > 0)
             {
-                string path = Path.Combine(Settings.CarsPath, entity.Id);
-                _imageService.CreateDirectory(path);
-                var carImages = await _imageService.SaveCarImagesAsync(dto.Images, path);
-                entity.Images = carImages;
-            
+                entity.Images = await SaveImagesAsync(dto.Images, entity.Id);
             }
 
             var result = await _carRepository.CreateAsync(entity);
@@ -95,6 +95,26 @@ namespace pv311_web_api.BLL.Services.Cars
             var dtos = _mapper.Map<List<CarDto>>(cars);
 
             return new ServiceResponse("Автомобілі отримано", true, dtos);
+        }
+
+        private async Task<List<CarImage>> SaveImagesAsync(IEnumerable<IFormFile> images, string carId)
+        {
+            List<CarImage> carImages = [];
+
+            var names = await _storageService.UploadImagesAsync(images, Path.Combine(Settings.CarsPath, carId));
+            
+            foreach (var name in names)
+            {
+                int index = name.LastIndexOf('/');
+                index = index == -1 ? name.LastIndexOf('\\') : index;
+                var carImage = new CarImage
+                {
+                    Path = name,
+                    Name = name.Substring(index + 1)
+                };
+                carImages.Add(carImage);
+            }
+            return carImages;
         }
     }
 }

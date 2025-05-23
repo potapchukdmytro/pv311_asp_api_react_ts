@@ -6,6 +6,7 @@ namespace pv311_web_api.BLL.Services.Storage
     {
         Task<string?> UploadFileAsync(IFormFile file, string containerName, string directoryPath);
         Task<string?> UploadImageAsync(IFormFile image, string directoryPath);
+        Task<List<string>> UploadImagesAsync(IEnumerable<IFormFile> images, string directoryPath);
         Task DeleteFileAsync(string containerName, string filePath);
         Task DeleteImageAsync(string filePath);
     }

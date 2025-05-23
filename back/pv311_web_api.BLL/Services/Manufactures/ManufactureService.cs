@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using pv311_web_api.BLL.DTOs.Manufactures;
 using pv311_web_api.BLL.Services.Image;
+using pv311_web_api.BLL.Services.Storage;
 using pv311_web_api.DAL.Entities;
 using pv311_web_api.DAL.Repositories.Manufactures;
 using System.Text;
@@ -15,30 +16,30 @@ namespace pv311_web_api.BLL.Services.Manufactures
         private readonly IManufactureRepository _manufactureRepository;
         private readonly IImageService _imageService;
         private readonly ILogger<ManufactureService> _logger;
+        private readonly IStorageService _storageService;
 
-        public ManufactureService(IMapper mapper, IImageService imageService, IManufactureRepository manufactureRepository, ILogger<ManufactureService> logger)
+        public ManufactureService(IMapper mapper, IImageService imageService, IManufactureRepository manufactureRepository, ILogger<ManufactureService> logger, IStorageService storageService)
         {
             _mapper = mapper;
             _imageService = imageService;
             _manufactureRepository = manufactureRepository;
             _logger = logger;
+            _storageService = storageService;
         }
 
         public async Task<ServiceResponse> CreateAsync(CreateManufactureDto dto)
         {
+            if(!await IsUniqueNameAsync(dto.Name))
+            {
+                return new ServiceResponse($"Виробник з іменем '{dto.Name}' вже існує");
+            }
+
             var entity = _mapper.Map<Manufacture>(dto);
-            string? imageName = null;
 
             if (dto.Image != null)
             {
-                imageName = await _imageService.SaveImageAsync(dto.Image, Settings.ManufacturesPath);
-                if (imageName != null)
-                {
-                    imageName = Path.Combine(Settings.ManufacturesPath, imageName);
-                }
+                entity.Image = await _storageService.UploadImageAsync(dto.Image, Settings.ManufacturesPath);
             }
-
-            entity.Image = imageName;
 
             var result = await _manufactureRepository.CreateAsync(entity);
             
@@ -139,6 +140,11 @@ namespace pv311_web_api.BLL.Services.Manufactures
             }
 
             return new ServiceResponse("Помилка оновлення виробника");
+        }
+
+        private async Task<bool> IsUniqueNameAsync(string name)
+        {
+            return await _manufactureRepository.GetByNameAsync(name) == null;
         }
     }
 }

@@ -62,6 +62,20 @@ namespace pv311_web_api.BLL.Services.Storage
             return await UploadFileAsync(image, ImagesContainer, directoryPath);
         }
 
+        public async Task<List<string>> UploadImagesAsync(IEnumerable<IFormFile> images, string directoryPath)
+        {
+            List<string> names = [];
+            foreach (var image in images)
+            {
+                string? name = await UploadImageAsync(image, directoryPath);
+                if(name != null)
+                {
+                    names.Add(name);
+                }
+            }
+            return names;
+        }
+
         private string GetFileExtension(IFormFile file)
         {
             var types = file.ContentType.Split('/');
