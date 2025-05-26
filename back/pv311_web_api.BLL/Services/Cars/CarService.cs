@@ -52,6 +52,29 @@ namespace pv311_web_api.BLL.Services.Cars
             return new ServiceResponse($"Автомобіль '{entity.Brand} {entity.Model}' збережено", true);
         }
 
+        public async Task<ServiceResponse> DeleteAsync(string id)
+        {
+            var entity = await _carRepository
+                .GetAll()
+                .AsNoTracking()
+                .Include(e => e.Images)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
+            if(entity == null)
+            {
+                return new ServiceResponse("Автомобіль не знайдено");
+            }
+
+            await _storageService.DeleteImagesAsync(entity.Images.Select(i => i.Path).ToList());
+
+            await _carRepository.DeleteCarImagesAsync(entity);
+
+
+            await _carRepository.DeleteAsync(entity);
+
+            return new ServiceResponse($"Автомобіль {entity.Model} видалено");
+        }
+
         public async Task<ServiceResponse> GetAllAsync(int page = 1, int pageSize = Settings.PageSize, string? manufacture = null)
         {
             pageSize = pageSize < 1 ? Settings.PageSize : pageSize;

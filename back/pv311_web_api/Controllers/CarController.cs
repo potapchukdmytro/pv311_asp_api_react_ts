@@ -37,8 +37,9 @@ namespace pv311_web_api.Controllers
         }
 
         [HttpDelete]
-        public IActionResult Delete()
+        public async Task<IActionResult> DeleteAsync(string id)
         {
+            await _carService.DeleteAsync(id);
             return Ok();
         }
 

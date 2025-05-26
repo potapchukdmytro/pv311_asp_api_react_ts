@@ -7,5 +7,6 @@ namespace pv311_web_api.DAL.Repositories.Cars
         : IGenericRepository<Car, string>
     {
         IQueryable<Car> GetCars(Expression<Func<Car, bool>>? pred = null);
+        Task DeleteCarImagesAsync(Car car);
     }
 }

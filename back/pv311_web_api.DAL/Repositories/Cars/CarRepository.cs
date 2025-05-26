@@ -8,8 +8,22 @@ namespace pv311_web_api.DAL.Repositories.Cars
         : GenericRepository<Car, string>,
         ICarRepository
     {
+        private readonly AppDbContext _context;
+
         public CarRepository(AppDbContext context)
-        : base(context) { }
+        : base(context) 
+        {
+            _context = context;
+        }
+
+        public async Task DeleteCarImagesAsync(Car car)
+        {
+            var images = _context.CarImages
+                .AsNoTracking()
+                .Where(i => i.CarId == car.Id);
+            _context.CarImages.RemoveRange(images);
+            await _context.SaveChangesAsync();
+        }
 
         public IQueryable<Car> GetCars(Expression<Func<Car, bool>>? pred = null)
         {

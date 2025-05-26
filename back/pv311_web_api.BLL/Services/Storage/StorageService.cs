@@ -86,5 +86,13 @@ namespace pv311_web_api.BLL.Services.Storage
 
             return string.Empty;
         }
+
+        public async Task DeleteImagesAsync(List<string> paths)
+        {
+            foreach (var path in paths)
+            {
+                await DeleteFileAsync("images", path);   
+            }
+        }
     }
 }
