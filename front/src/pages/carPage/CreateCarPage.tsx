@@ -1,10 +1,12 @@
-import React, { ChangeEvent, useState } from "react";
+import React, { ChangeEvent, useState, useRef } from "react";
 import { CreateCar } from "../../services/car/types";
 import { InputText } from "primereact/inputtext";
 import { InputNumber, InputNumberChangeEvent } from "primereact/inputnumber";
 import { FileUpload, FileUploadHandlerEvent } from "primereact/fileupload";
 import { Button } from "primereact/button";
 import { useCreateCarMutation } from "../../services/car/car";
+import { useNavigate } from "react-router";
+import { Toast } from 'primereact/toast';
 
 const fieldStyle: React.CSSProperties = {
     margin: "5px 0px",
@@ -14,13 +16,14 @@ const imagesGrid: React.CSSProperties = {
     margin: "5px 0px",
     display: "grid",
     gridTemplateColumns: "1fr 1fr 1fr",
-    gap: "8px"
+    gap: "8px",
 };
 
-const previewImageStyle = {
-    borderRadius: "10px", 
-    boxShadow: "1px 1px 6px black"
-}
+const previewImageStyle: React.CSSProperties = {
+    borderRadius: "10px",
+    boxShadow: "1px 1px 6px black",
+    padding: "10px"
+};
 
 const imagesFiledStyle: React.CSSProperties = {
     margin: "5px 0px",
@@ -39,6 +42,8 @@ const CreateCarPage: React.FC = () => {
     });
     const [images, setImages] = useState<File[]>([]);
     const [createCar] = useCreateCarMutation();
+    const navigate = useNavigate();
+    const toast = useRef<Toast>(null);
 
     const inputTextChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -46,6 +51,30 @@ const CreateCarPage: React.FC = () => {
             return { ...prev, [name]: value };
         });
     };
+
+    // toast
+    const showSuccess = (message: string) => {
+        toast.current?.show({severity:'success', summary: 'Success', detail: message, life: 3000});
+    }
+
+    const showError = (message: string) => {
+        toast.current?.show({severity:'error', summary: 'Error', detail: message, life: 3000});
+    }
+
+    const apiResultHanler = (result: any) => {
+        if (!result.error) {
+            if('message' in result.data) {
+                showSuccess(result.data.message);
+            }
+        } else {
+            if('data' in result.error) {
+                const data = result.error.data as any;
+                if('message' in data) {
+                    showError(data.message);
+                }
+            }
+        }
+    }
 
     const inputNumberChangeHandler = (e: InputNumberChangeEvent) => {
         const originalEvent = e.originalEvent as ChangeEvent<HTMLInputElement>;
@@ -63,12 +92,6 @@ const CreateCarPage: React.FC = () => {
     const deleteImageHandler = (image: File) => {
         const newImages = images.filter((i) => i !== image);
         setImages(newImages);
-    };
-
-    const uploadHandler = (e: FileUploadHandlerEvent) => {
-        if (e.files.length > 0) {
-            setImages(e.files);
-        }
     };
 
     const uploadImageHandler = (e: FileUploadHandlerEvent) => {
@@ -96,7 +119,12 @@ const CreateCarPage: React.FC = () => {
         });
 
         const response = await createCar(formData);
-        console.log(response);
+        
+        if(!response.error) {
+            navigate("/car");
+        } else {
+            apiResultHanler(response);
+        }
     };
 
     return (
@@ -107,6 +135,7 @@ const CreateCarPage: React.FC = () => {
                 alignItems: "center",
             }}
         >
+            <Toast ref={toast} />
             <div style={fieldStyle}>
                 <InputText
                     onChange={inputTextChangeHandler}
@@ -158,27 +187,17 @@ const CreateCarPage: React.FC = () => {
                     name="manufacture"
                 />
             </div>
-            {/* <div style={fieldStyle}>
-                <FileUpload
-                    customUpload
-                    multiple
-                    mode="basic"
-                    name="images"
-                    accept="image/*"
-                    uploadHandler={uploadHandler}
-                />
-            </div> */}
             <div style={imagesFiledStyle}>
                 <div style={imagesGrid}>
                     {images.map((image, index) => (
-                        <img
-                            style={previewImageStyle}
-                            onClick={() => deleteImageHandler(image)}
-                            key={index}
-                            src={URL.createObjectURL(image)}
-                            alt={image.name}
-                            width={200}
-                        />
+                            <img
+                                style={previewImageStyle}
+                                onClick={() => deleteImageHandler(image)}
+                                key={index}
+                                src={URL.createObjectURL(image)}
+                                alt={image.name}
+                                width={200}
+                            />
                     ))}
                 </div>
 
